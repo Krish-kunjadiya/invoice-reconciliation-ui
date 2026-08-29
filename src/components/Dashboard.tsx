@@ -13,6 +13,7 @@ export function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [excelBase64, setExcelBase64] = useState<string | null>(null);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -44,6 +45,9 @@ export function Dashboard() {
       if (data.success && data.items) {
         setSummary(data.summary);
         setResults(data.items);
+        if (data.excelBase64) {
+          setExcelBase64(data.excelBase64);
+        }
       } else {
         alert("Webhook response did not indicate success or lacked items.");
       }
@@ -117,6 +121,7 @@ export function Dashboard() {
                 onClick={() => {
                   setResults([]);
                   setSummary(null);
+                  setExcelBase64(null);
                   setFiles([]);
                 }}
               >
@@ -127,6 +132,7 @@ export function Dashboard() {
             <ResultsTable 
               items={results} 
               summary={summary} 
+              excelBase64={excelBase64}
               onRowClick={handleRowClick}
             />
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Download, AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react';
-import { formatCurrency, exportToExcel } from '@/lib/utils';
+import { formatCurrency, exportToExcel, downloadBase64Excel } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -18,10 +18,11 @@ import { motion } from "framer-motion";
 interface ResultsTableProps {
   items: any[];
   summary: any;
+  excelBase64?: string | null;
   onRowClick: (item: any) => void;
 }
 
-export function ResultsTable({ items, summary, onRowClick }: ResultsTableProps) {
+export function ResultsTable({ items, summary, excelBase64, onRowClick }: ResultsTableProps) {
   const [filter, setFilter] = useState<'all' | 'matched' | 'unmatched'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -99,7 +100,17 @@ export function ResultsTable({ items, summary, onRowClick }: ResultsTableProps) 
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button onClick={() => exportToExcel(items, summary)} variant="default" className="flex gap-2">
+            <Button 
+              onClick={() => {
+                if (excelBase64) {
+                  downloadBase64Excel(excelBase64, summary?.fileName || "Processed_Invoices.xlsx");
+                } else {
+                  exportToExcel(items, summary);
+                }
+              }} 
+              variant="default" 
+              className="flex gap-2"
+            >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export XLSX</span>
             </Button>

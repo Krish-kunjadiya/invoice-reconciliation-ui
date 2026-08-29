@@ -43,3 +43,12 @@ export function exportToExcel(data: any[], summary: any, filename: string = "Pro
   // Trigger download
   XLSX.writeFile(wb, filename);
 }
+
+export function downloadBase64Excel(base64: string, filename: string = "Processed_Invoices.xlsx") {
+  const link = document.createElement('a');
+  link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
