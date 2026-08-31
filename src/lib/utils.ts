@@ -52,3 +52,16 @@ export function downloadBase64Excel(base64: string, filename: string = "Processe
   link.click();
   document.body.removeChild(link);
 }
+
+export function parseSummaryFromExcel(base64: string): any[][] | null {
+  try {
+    const workbook = XLSX.read(base64, { type: 'base64' });
+    const summarySheet = workbook.Sheets['Summary'];
+    if (!summarySheet) return null;
+    // Return array of arrays, keeping empty cells
+    return XLSX.utils.sheet_to_json(summarySheet, { header: 1, defval: "" });
+  } catch (error) {
+    console.error("Error parsing Excel summary:", error);
+    return null;
+  }
+}

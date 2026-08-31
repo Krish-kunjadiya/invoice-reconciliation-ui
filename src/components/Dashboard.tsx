@@ -3,10 +3,13 @@
 import React, { useState } from 'react';
 import { Dropzone } from './Dropzone';
 import { ResultsTable } from './ResultsTable';
+import { SummaryTable } from './SummaryTable';
 import { SidePanel } from './SidePanel';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { parseSummaryFromExcel } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function Dashboard() {
   const [files, setFiles] = useState<File[]>([]);
@@ -14,6 +17,7 @@ export function Dashboard() {
   const [results, setResults] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
   const [excelBase64, setExcelBase64] = useState<string | null>(null);
+  const [summarySheetData, setSummarySheetData] = useState<any[][] | null>(null);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -47,6 +51,8 @@ export function Dashboard() {
         setResults(data.items);
         if (data.excelBase64) {
           setExcelBase64(data.excelBase64);
+          const parsed = parseSummaryFromExcel(data.excelBase64);
+          if (parsed) setSummarySheetData(parsed);
         }
       } else {
         alert("Webhook response did not indicate success or lacked items.");
@@ -122,6 +128,7 @@ export function Dashboard() {
                   setResults([]);
                   setSummary(null);
                   setExcelBase64(null);
+                  setSummarySheetData(null);
                   setFiles([]);
                 }}
               >
@@ -129,12 +136,31 @@ export function Dashboard() {
               </Button>
             </motion.div>
 
-            <ResultsTable 
-              items={results} 
-              summary={summary} 
-              excelBase64={excelBase64}
-              onRowClick={handleRowClick}
-            />
+            <Tabs defaultValue="summary" className="w-full">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+                <TabsTrigger value="summary">Invoice Summary</TabsTrigger>
+                <TabsTrigger value="line-items">Detailed Line Items</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="summary" className="focus-visible:outline-none">
+                {summarySheetData ? (
+                  <SummaryTable data={summarySheetData} />
+                ) : (
+                  <div className="p-12 text-center border rounded-xl bg-muted/20">
+                    <p className="text-muted-foreground">The Excel summary data was not returned by the workflow.</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="line-items" className="focus-visible:outline-none">
+                <ResultsTable 
+                  items={results} 
+                  summary={summary} 
+                  excelBase64={excelBase64}
+                  onRowClick={handleRowClick}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </main>
