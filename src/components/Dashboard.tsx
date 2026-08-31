@@ -22,13 +22,17 @@ export function Dashboard() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://husband-tracing-rewind.ngrok-free.dev/webhook-test/pdf-to-excel';
+  const webhookUrl = process.env.NEXT_PUBLIC_WORKFLOW_URL;
 
   const processInvoices = async () => {
     if (files.length === 0) return;
     
+    if (!webhookUrl) {
+      throw new Error("NEXT_PUBLIC_WORKFLOW_URL is not set");
+    }
+
     setIsProcessing(true);
-    
+
     try {
       const formData = new FormData();
       files.forEach((file) => {
