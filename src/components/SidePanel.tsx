@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   Sheet,
@@ -10,15 +10,20 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface SidePanelProps {
   item: any;
   isOpen: boolean;
   onClose: () => void;
   threshold: number;
+  onPrev: () => void;
+  onNext: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
 }
 
-export function SidePanel({ item, isOpen, onClose, threshold }: SidePanelProps) {
+export function SidePanel({ item, isOpen, onClose, threshold, onPrev, onNext, hasPrev, hasNext }: SidePanelProps) {
   if (!item) return null;
   const isMatched = item.status === 'matched';
   const diff = item.difference;
@@ -27,7 +32,29 @@ export function SidePanel({ item, isOpen, onClose, threshold }: SidePanelProps) 
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col border-l">
         <SheetHeader className="p-6 border-b bg-muted/20">
-          <SheetTitle>Line Item Details</SheetTitle>
+          <div className="flex items-center justify-between pr-8">
+            <SheetTitle>Line Item Details</SheetTitle>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={!hasPrev}
+                onClick={onPrev}
+                aria-label="Previous item"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={!hasNext}
+                onClick={onNext}
+                aria-label="Next item"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
           <SheetDescription>
             Reconciliation details for invoice {item.invoiceNumber}
           </SheetDescription>
