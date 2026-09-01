@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import Link from 'next/link';
 import { Dropzone } from './Dropzone';
 import { ResultsTable } from './ResultsTable';
 import { SummaryTable } from './SummaryTable';
@@ -135,9 +136,9 @@ function DashboardContent() {
       
       <header className="w-full flex items-center justify-between p-6 md:px-10 bg-background/80 backdrop-blur-md border-b sticky top-0 z-40">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-70 transition-opacity">
             Invoice Reconciliation
-          </h1>
+          </Link>
           <p className="text-muted-foreground text-sm mt-1">Upload invoices and automatically validate line items</p>
         </div>
         {isProcessing ? (

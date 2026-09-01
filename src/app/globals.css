@@ -7,6 +7,15 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Brand palette pinned so brand-600 is exactly #A78BFA */
+  --color-brand-50: #fbf9ff;
+  --color-brand-100: #f6f3ff;
+  --color-brand-300: #cab9fc;
+  --color-brand-600: #a78bfa;
+  --color-brand-700: #8e76d5;
+  --color-brand-800: #7561af;
+  --color-brand-900: #5c4c8a;
 }
 
 body {
@@ -30,6 +39,18 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Hide the outer page scrollbar (kept scrollable) while table containers keep theirs above */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Hide input file button */
