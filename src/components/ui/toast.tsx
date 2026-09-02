@@ -61,7 +61,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <motion.div
               key={t.id}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              animate={
+                t.variant === "error"
+                  ? { opacity: 1, y: 0, scale: 1, x: [0, -6, 6, -4, 4, 0] }
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              transition={{ x: { duration: 0.4 } }}
               exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
               role="alert"
               className={cn(

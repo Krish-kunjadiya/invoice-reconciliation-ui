@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Download, AlertTriangle, CheckCircle2, ChevronRight, ChevronLeft, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { formatCurrency, exportToExcel, downloadBase64Excel } from '@/lib/utils';
+import { Search, AlertTriangle, CheckCircle2, ChevronRight, ChevronLeft, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -16,11 +16,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { cn } from '@/lib/utils';
+import { CountUp } from '@/components/ui/count-up';
 
 interface ResultsTableProps {
   items: any[];
   summary: any;
-  excelBase64?: string | null;
   onRowClick: (item: any, list: any[]) => void;
 }
 
@@ -39,7 +39,36 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align: 'left' | 'right' }
   { key: 'systemBeforeGST', label: 'System ₹', align: 'right' },
 ];
 
-export function ResultsTable({ items, summary, excelBase64, onRowClick }: ResultsTableProps) {
+function MatchRateDonut({ matched, total }: { matched: number; total: number }) {
+  const pct = total > 0 ? Math.round((matched / total) * 100) : 0;
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct / 100);
+
+  return (
+    <div className="flex items-center gap-4">
+      <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90 shrink-0">
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="var(--destructive)" strokeOpacity="0.2" strokeWidth="8" />
+        <motion.circle
+          cx="36" cy="36" r={radius} fill="none"
+          stroke="var(--color-emerald-500, #10b981)"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </svg>
+      <div>
+        <div className="text-2xl font-bold"><CountUp value={pct} formatter={(v) => `${v}%`} /></div>
+        <p className="text-sm font-medium text-muted-foreground">Match Rate</p>
+      </div>
+    </div>
+  );
+}
+
+export function ResultsTable({ items, summary, onRowClick }: ResultsTableProps) {
   const [filter, setFilter] = useState<'all' | 'matched' | 'unmatched'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -131,7 +160,7 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
       className="w-full space-y-6"
     >
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card
             {...statCardClick('all')}
             className={cn(
@@ -140,7 +169,7 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
             )}
           >
             <CardContent className="p-6">
-              <div className="text-3xl font-bold">{summary.totalItems}</div>
+              <div className="text-3xl font-bold"><CountUp value={summary.totalItems} /></div>
               <p className="text-sm font-medium text-muted-foreground mt-1">Total Items</p>
             </CardContent>
           </Card>
@@ -152,7 +181,7 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
             )}
           >
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-emerald-600">{summary.matched}</div>
+              <div className="text-3xl font-bold text-emerald-600"><CountUp value={summary.matched} /></div>
               <p className="text-sm font-medium text-emerald-600/80 mt-1 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4"/> Matched</p>
             </CardContent>
           </Card>
@@ -164,7 +193,7 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
             )}
           >
             <CardContent className="p-6">
-              <div className="text-3xl font-bold text-destructive">{summary.unmatched}</div>
+              <div className="text-3xl font-bold text-destructive"><CountUp value={summary.unmatched} /></div>
               <p className="text-sm font-medium text-destructive/80 mt-1 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Unmatched</p>
             </CardContent>
           </Card>
@@ -172,6 +201,11 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
             <CardContent className="p-6">
               <div className="text-3xl font-bold text-primary">±{formatCurrency(summary.threshold).replace('₹', '₹ ')}</div>
               <p className="text-sm font-medium text-primary/80 mt-1">Threshold</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardContent className="p-6 flex items-center h-full">
+              <MatchRateDonut matched={summary.matched} total={summary.totalItems} />
             </CardContent>
           </Card>
         </div>
@@ -193,30 +227,14 @@ export function ResultsTable({ items, summary, excelBase64, onRowClick }: Result
             ))}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search materials or invoices..."
-                className="pl-9 bg-background"
-                value={searchTerm}
-                onChange={(e) => applySearch(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                if (excelBase64) {
-                  downloadBase64Excel(excelBase64, summary?.fileName || "Processed_Invoices.xlsx");
-                } else {
-                  exportToExcel(items, summary);
-                }
-              }}
-              variant="default"
-              className="flex gap-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export XLSX</span>
-            </Button>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search materials or invoices..."
+              className="pl-9 bg-background"
+              value={searchTerm}
+              onChange={(e) => applySearch(e.target.value)}
+            />
           </div>
         </div>
 
