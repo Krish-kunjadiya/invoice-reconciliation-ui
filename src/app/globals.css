@@ -58,6 +58,31 @@ input[type="file"]::file-selector-button {
   display: none;
 }
 
+/* Dropzone motion */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: .45; }
+  50% { transform: scale(1.12); opacity: .75; }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -120px 0; }
+  100% { background-position: 120px 0; }
+}
+
+.anim-breathe { animation: breathe 2.6s ease-in-out infinite; }
+.anim-float-1 { animation: float-slow 6s ease-in-out infinite; }
+.anim-float-2 { animation: float-slow 7.5s ease-in-out infinite 1s; }
+.anim-float-3 { animation: float-slow 5.2s ease-in-out infinite 2s; }
+
+.shimmer-bar {
+  background-image: linear-gradient(90deg, var(--primary) 0%, color-mix(in oklab, var(--primary), white 35%) 50%, var(--primary) 100%);
+  background-size: 240px 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
