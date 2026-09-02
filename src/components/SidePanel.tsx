@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -61,7 +62,14 @@ export function SidePanel({ item, isOpen, onClose, threshold, onPrev, onNext, ha
         </SheetHeader>
 
         <ScrollArea className="flex-1 p-6">
-          <div className="space-y-6">
+          <AnimatePresence mode="wait">
+          <motion.div
+            key={item.invoiceNumber + item.materialCode}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.18 }}
+            className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Invoice Number</p>
@@ -124,7 +132,8 @@ export function SidePanel({ item, isOpen, onClose, threshold, onPrev, onNext, ha
                 <span className="text-muted-foreground font-medium">±{formatCurrency(threshold)}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
+          </AnimatePresence>
         </ScrollArea>
 
         <div className={`p-6 border-t ${isMatched ? 'bg-emerald-50/50' : 'bg-destructive/5'}`}>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { UploadCloud, File as FileIcon, X } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, CheckCircle2, Sparkles, ScanSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,8 @@ interface DropzoneProps {
   onProcess: () => void;
   isProcessing: boolean;
   onCancel: () => void;
+  uploadProgress: number;
+  processingStep: 'uploading' | 'extracting' | 'done';
 }
 
 function ElapsedTimer() {
@@ -25,7 +27,84 @@ function ElapsedTimer() {
   return <>{seconds}s elapsed</>;
 }
 
-export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }: DropzoneProps) {
+const STEPS = [
+  { key: 'uploading', label: 'Uploading', icon: UploadCloud },
+  { key: 'extracting', label: 'Extracting & Matching', icon: ScanSearch },
+  { key: 'done', label: 'Finalizing', icon: Sparkles },
+] as const;
+
+function ProcessingSteps({ processingStep, uploadProgress }: { processingStep: DropzoneProps['processingStep']; uploadProgress: number }) {
+  const activeIndex = STEPS.findIndex((s) => s.key === processingStep);
+
+  return (
+    <div className="w-full max-w-sm mx-auto space-y-4">
+      <div className="flex items-center justify-between">
+        {STEPS.map((step, idx) => {
+          const isDone = idx < activeIndex;
+          const isActive = idx === activeIndex;
+          const Icon = step.icon;
+          return (
+            <React.Fragment key={step.key}>
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <motion.div
+                  animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                  transition={isActive ? { repeat: Infinity, duration: 1.4 } : undefined}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
+                    isDone && "bg-primary border-primary text-primary-foreground",
+                    isActive && !isDone && "border-primary text-primary bg-primary/10",
+                    !isActive && !isDone && "border-muted-foreground/20 text-muted-foreground/40"
+                  )}
+                >
+                  {isDone ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                </motion.div>
+                <span className={cn(
+                  "text-[11px] font-medium text-center leading-tight",
+                  (isActive || isDone) ? "text-foreground" : "text-muted-foreground/50"
+                )}>
+                  {step.label}
+                </span>
+              </div>
+              {idx < STEPS.length - 1 && (
+                <div className="h-0.5 flex-1 -mt-5 rounded-full bg-muted-foreground/15 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: idx < activeIndex ? '100%' : '0%' }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {processingStep === 'uploading' ? (
+        <div className="space-y-1.5">
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-primary"
+              animate={{ width: `${uploadProgress}%` }}
+              transition={{ duration: 0.2 }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
+        </div>
+      ) : (
+        <div className="h-2 w-full rounded-full bg-muted overflow-hidden relative">
+          <motion.div
+            className="h-full w-1/3 rounded-full bg-primary absolute"
+            animate={{ left: ['-33%', '100%'] }}
+            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel, uploadProgress, processingStep }: DropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isDragActive, setIsDragActive] = useState(false);
@@ -60,19 +139,17 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }:
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center space-y-6"
+          className="flex flex-col items-center justify-center space-y-8"
         >
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-primary/20 rounded-full"></div>
-            <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-            <UploadCloud className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
           <div>
             <h3 className="text-xl font-semibold">Processing Invoices...</h3>
             <p className="text-sm text-muted-foreground mt-2">
               This can take up to 2 minutes — <ElapsedTimer />
             </p>
           </div>
+
+          <ProcessingSteps processingStep={processingStep} uploadProgress={uploadProgress} />
+
           <Button variant="outline" size="sm" onClick={onCancel}>
             Cancel
           </Button>
@@ -82,7 +159,7 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }:
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
+    <div className="w-full max-w-2xl mx-auto space-y-6 pb-24">
       <div
         role="button"
         tabIndex={0}
@@ -110,21 +187,26 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }:
           }
         }}
         className={cn(
-          "border-2 border-dashed border-muted-foreground/30 rounded-2xl hover:border-primary hover:bg-muted/30 transition-all cursor-pointer p-14 flex flex-col items-center justify-center bg-card shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-          isDragActive && "border-solid border-blue-500 bg-blue-500/10 scale-[1.02] shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/20"
+          "border-2 border-dashed border-muted-foreground/30 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all cursor-pointer p-14 flex flex-col items-center justify-center bg-card shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          !isDragActive && files.length === 0 && "animate-[pulse_3s_ease-in-out_infinite] shadow-primary/10",
+          isDragActive && "border-solid border-primary bg-primary/10 scale-[1.02] shadow-lg shadow-primary/20 ring-4 ring-primary/20"
         )}
       >
-        <div className={cn(
-          "w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-colors",
-          isDragActive ? "bg-blue-500/20" : "bg-primary/10"
-        )}>
-          <UploadCloud className={cn("w-8 h-8 transition-colors", isDragActive ? "text-blue-500" : "text-primary")} />
-        </div>
+        <motion.div
+          animate={isDragActive ? { scale: 1.1, rotate: [0, -6, 6, 0] } : { scale: 1, rotate: 0 }}
+          transition={{ duration: 0.3 }}
+          className={cn(
+            "w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-colors",
+            "bg-primary/10"
+          )}
+        >
+          <UploadCloud className="w-8 h-8 transition-colors text-primary" />
+        </motion.div>
         <h3 className="text-xl font-semibold mb-2">
           {isDragActive ? "Drop to upload" : "Upload PDF Invoices"}
         </h3>
         <p className="text-sm text-muted-foreground mb-6">Drag and drop your files here, or click to browse</p>
-        
+
         <input ref={inputRef} type="file" className="hidden" multiple accept="application/pdf" onChange={onFileSelect} />
         <Button variant="secondary" className="pointer-events-none">
           Browse Files
@@ -133,7 +215,7 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }:
 
       <AnimatePresence>
         {files.length > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -143,33 +225,60 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel }:
               <span className="text-sm font-medium">{files.length} file(s) selected</span>
               <Button variant="ghost" size="sm" onClick={() => setFiles([])} className="h-8 text-muted-foreground hover:text-foreground">Clear all</Button>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {files.map((file: File, idx: number) => (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  key={`${file.name}-${idx}`}
-                  className="flex items-center justify-between p-3 rounded-xl border bg-card text-card-foreground shadow-sm"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <FileIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-medium truncate">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setFiles((prev: any) => prev.filter((_: any, i: number) => i !== idx))}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
 
-            <div className="flex justify-center pt-6">
-              <Button size="lg" onClick={onProcess} className="w-full sm:w-auto px-10 rounded-full shadow-lg shadow-primary/20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <AnimatePresence>
+                {files.map((file: File, idx: number) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    key={`${file.name}-${idx}`}
+                    className="flex items-center justify-between p-3 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="relative w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <FileIcon className="w-4 h-4 text-primary" />
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                        </motion.span>
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setFiles((prev: any) => prev.filter((_: any, i: number) => i !== idx))}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {files.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-6 pb-6 pointer-events-none"
+          >
+            <div className="pointer-events-auto bg-background/95 backdrop-blur-md border shadow-2xl shadow-primary/10 rounded-full p-2 pl-5 flex items-center gap-4">
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                {files.length} file{files.length > 1 ? 's' : ''} ready
+              </span>
+              <Button size="lg" onClick={onProcess} className="px-8 rounded-full shadow-lg shadow-primary/20">
                 Process {files.length} Invoice{files.length > 1 ? 's' : ''}
               </Button>
             </div>

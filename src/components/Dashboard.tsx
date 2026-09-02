@@ -6,10 +6,10 @@ import { Dropzone } from './Dropzone';
 import { ResultsTable } from './ResultsTable';
 import { SummaryTable } from './SummaryTable';
 import { SidePanel } from './SidePanel';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { parseSummaryFromExcel } from '@/lib/utils';
+import { downloadBase64Excel, exportToExcel, parseSummaryFromExcel } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 
@@ -36,7 +36,10 @@ function DashboardContent() {
   const [navigableItems, setNavigableItems] = useState<any[]>([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingStep, setProcessingStep] = useState<'uploading' | 'extracting' | 'done'>('uploading');
+
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
   const cancelledRef = useRef(false);
 
   const webhookUrl = process.env.NEXT_PUBLIC_WORKFLOW_URL;
@@ -49,11 +52,9 @@ function DashboardContent() {
       return;
     }
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
     cancelledRef.current = false;
-    const timeoutId = setTimeout(() => controller.abort(), PROCESSING_TIMEOUT_MS);
-
+    setUploadProgress(0);
+    setProcessingStep('uploading');
     setIsProcessing(true);
 
     try {
@@ -62,25 +63,43 @@ function DashboardContent() {
         formData.append("files", file);
       });
 
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
+      const { status, statusText, body } = await new Promise<{ status: number; statusText: string; body: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+        xhr.open("POST", webhookUrl);
+        xhr.timeout = PROCESSING_TIMEOUT_MS;
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.upload.onload = () => {
+          setUploadProgress(100);
+          setProcessingStep('extracting');
+        };
+
+        xhr.onload = () => resolve({ status: xhr.status, statusText: xhr.statusText, body: xhr.responseText });
+        xhr.onerror = () => reject(new Error("Network error while contacting the workflow."));
+        xhr.ontimeout = () => reject(Object.assign(new Error("timeout"), { name: "TimeoutError" }));
+        xhr.onabort = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+
+        xhr.send(formData);
       });
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      if (status < 200 || status >= 300) {
+        throw new Error(`Error: ${status} ${statusText}`);
       }
 
-      const rawBody = await response.text();
       let data: any;
       try {
-        data = rawBody ? JSON.parse(rawBody) : null;
+        data = body ? JSON.parse(body) : null;
       } catch {
         throw new Error("Workflow returned a response that wasn't valid JSON.");
       }
 
       if (data?.success && data.items) {
+        setProcessingStep('done');
         setSummary(data.summary);
         setResults(data.items);
         if (data.excelBase64) {
@@ -98,20 +117,21 @@ function DashboardContent() {
         } else {
           toast(`Request timed out after ${PROCESSING_TIMEOUT_MS / 1000}s. Please try again.`, "error");
         }
+      } else if (error?.name === "TimeoutError") {
+        toast(`Request timed out after ${PROCESSING_TIMEOUT_MS / 1000}s. Please try again.`, "error");
       } else {
         console.error("Failed to process invoices:", error);
         toast(error?.message ? `Failed to process invoices: ${error.message}` : "Failed to process invoices. See console for details.", "error");
       }
     } finally {
-      clearTimeout(timeoutId);
-      abortControllerRef.current = null;
+      xhrRef.current = null;
       setIsProcessing(false);
     }
   };
 
   const cancelProcessing = () => {
     cancelledRef.current = true;
-    abortControllerRef.current?.abort();
+    xhrRef.current?.abort();
   };
 
   const handleRowClick = (item: any, list: any[]) => {
@@ -132,14 +152,19 @@ function DashboardContent() {
   const hasResults = results.length > 0 && !isProcessing;
 
   return (
-    <div className="w-full min-h-screen flex flex-col relative bg-background text-foreground">
-      
+    <div className="w-full min-h-screen flex flex-col relative bg-background text-foreground bg-[radial-gradient(circle_at_top,rgba(167,139,250,0.12),transparent_55%)]">
+
       <header className="w-full flex items-center justify-between p-6 md:px-10 bg-background/80 backdrop-blur-md border-b sticky top-0 z-40">
-        <div>
-          <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-70 transition-opacity">
-            Invoice Reconciliation
-          </Link>
-          <p className="text-muted-foreground text-sm mt-1">Upload invoices and automatically validate line items</p>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/30">
+            <FileText className="h-4 w-4" />
+          </span>
+          <div>
+            <Link href="/" className="text-2xl font-bold tracking-tight hover:opacity-70 transition-opacity">
+              Invoice Reconciliation
+            </Link>
+            <p className="text-muted-foreground text-sm mt-1">Upload invoices and automatically validate line items</p>
+          </div>
         </div>
         {isProcessing ? (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">
@@ -173,6 +198,8 @@ function DashboardContent() {
               onProcess={processInvoices}
               isProcessing={isProcessing}
               onCancel={cancelProcessing}
+              uploadProgress={uploadProgress}
+              processingStep={processingStep}
             />
           </motion.div>
         )}
@@ -209,11 +236,27 @@ function DashboardContent() {
             </motion.div>
 
             <Tabs defaultValue="summary" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-                <TabsTrigger value="summary">Invoice Summary</TabsTrigger>
-                <TabsTrigger value="line-items">Detailed Line Items</TabsTrigger>
-              </TabsList>
-              
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+                <TabsList className="grid w-full sm:w-auto sm:min-w-md grid-cols-2">
+                  <TabsTrigger value="summary">Invoice Summary</TabsTrigger>
+                  <TabsTrigger value="line-items">Detailed Line Items</TabsTrigger>
+                </TabsList>
+                <Button
+                  onClick={() => {
+                    if (excelBase64) {
+                      downloadBase64Excel(excelBase64, summary?.fileName || "Processed_Invoices.xlsx");
+                    } else {
+                      exportToExcel(results, summary);
+                    }
+                  }}
+                  variant="default"
+                  className="flex gap-2 w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4" />
+                  Export XLSX
+                </Button>
+              </div>
+
               <TabsContent value="summary" className="focus-visible:outline-none">
                 {summarySheetData ? (
                   <SummaryTable data={summarySheetData} />
@@ -225,10 +268,9 @@ function DashboardContent() {
               </TabsContent>
               
               <TabsContent value="line-items" className="focus-visible:outline-none">
-                <ResultsTable 
-                  items={results} 
-                  summary={summary} 
-                  excelBase64={excelBase64}
+                <ResultsTable
+                  items={results}
+                  summary={summary}
                   onRowClick={handleRowClick}
                 />
               </TabsContent>
