@@ -8,14 +8,14 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Brand palette pinned so brand-600 is exactly #A78BFA */
-  --color-brand-50: #fbf9ff;
-  --color-brand-100: #f6f3ff;
-  --color-brand-300: #cab9fc;
-  --color-brand-600: #a78bfa;
-  --color-brand-700: #8e76d5;
-  --color-brand-800: #7561af;
-  --color-brand-900: #5c4c8a;
+  /* Brand palette pinned so brand-600 is exactly #64748B */
+  --color-brand-50: #f7f8f9;
+  --color-brand-100: #f0f1f3;
+  --color-brand-300: #a2acb9;
+  --color-brand-600: #64748b;
+  --color-brand-700: #556376;
+  --color-brand-800: #465161;
+  --color-brand-900: #37404c;
 }
 
 body {
@@ -133,7 +133,7 @@ input[type="file"]::file-selector-button {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #a78bfa;
+  --primary: #64748b;
   --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -168,8 +168,8 @@ input[type="file"]::file-selector-button {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #a78bfa;
-  --primary-foreground: #1e1533;
+  --primary: #64748b;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);

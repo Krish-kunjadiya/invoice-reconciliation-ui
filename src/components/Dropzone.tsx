@@ -241,7 +241,8 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel, u
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6 pb-24">
+    <div className={cn("w-full mx-auto space-y-6 pb-24 transition-all duration-300", files.length > 0 ? "max-w-5xl" : "max-w-2xl")}>
+      <div className={cn("w-full", files.length > 0 && "grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6 items-center")}>
       <div
         role="button"
         tabIndex={0}
@@ -305,10 +306,10 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel, u
       <AnimatePresence>
         {files.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-4 max-h-[520px] overflow-y-auto pr-1"
           >
             <div className="flex justify-between items-center px-1">
               <span className="text-sm font-medium">{files.length} file(s) selected</span>
@@ -371,6 +372,7 @@ export function Dropzone({ files, setFiles, onProcess, isProcessing, onCancel, u
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {files.length > 0 && (

@@ -152,7 +152,7 @@ function DashboardContent() {
   const hasResults = results.length > 0 && !isProcessing;
 
   return (
-    <div className="w-full min-h-screen flex flex-col relative bg-background text-foreground bg-[radial-gradient(circle_at_top,rgba(167,139,250,0.12),transparent_55%)]">
+    <div className="w-full min-h-screen flex flex-col relative bg-background text-foreground bg-[radial-gradient(circle_at_top,rgba(100,116,139,0.12),transparent_55%)]">
 
       <header className="w-full flex items-center justify-between p-6 md:px-10 bg-background/80 backdrop-blur-md border-b sticky top-0 z-40">
         <div className="flex items-center gap-3">
@@ -184,13 +184,13 @@ function DashboardContent() {
         )}
       </header>
 
-      <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 md:p-10 pb-24">
-        
+      <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 md:p-10 pb-24 flex flex-col">
+
         {!hasResults && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-10 md:mt-20"
+            className="flex-1 flex items-center justify-center min-h-[65vh]"
           >
             <Dropzone
               files={files}
